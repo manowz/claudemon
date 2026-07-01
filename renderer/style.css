@@ -1,0 +1,245 @@
+/* Claudémon — visual de "portátil" 8-bit: casco escuro + tela com scanlines */
+
+:root {
+  --shell: #2b2833;
+  --shell-edge: #17151d;
+  --screen: #10141f;
+  --screen-edge: #0a0d15;
+  --ink: #cdd6e4;
+  --ink-dim: #7f8aa0;
+  --cell-empty: #1d2331;
+  --ok: #3fdc72;
+  --warn: #ffd23f;
+  --bad: #ff5d5d;
+  --accent: #d97757;
+  --grass-hi: #58c04d;
+  --grass-lo: #2e7d38;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+html, body { background: transparent; overflow: hidden; }
+
+body {
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+  color: var(--ink);
+  -webkit-font-smoothing: none;
+}
+
+.shell {
+  width: 300px;
+  height: 480px;
+  background: var(--shell);
+  border: 3px solid var(--shell-edge);
+  border-radius: 16px;
+  padding: 8px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ---- barra de título (arrasta a janela) ---- */
+
+.titlebar {
+  -webkit-app-region: drag;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 2px 8px;
+}
+
+.brand { font-size: 9px; letter-spacing: 2px; color: var(--accent); }
+
+.tb-buttons { -webkit-app-region: no-drag; display: flex; gap: 4px; }
+
+.tb-btn {
+  font-family: inherit;
+  font-size: 9px;
+  width: 20px; height: 20px;
+  background: var(--screen);
+  color: var(--ink-dim);
+  border: 1px solid var(--shell-edge);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.tb-btn:hover { color: var(--ink); background: #1a2030; }
+.tb-quit:hover { color: var(--bad); }
+
+/* ---- tela ---- */
+
+.screen {
+  flex: 1;
+  background: var(--screen);
+  border: 2px solid var(--screen-edge);
+  border-radius: 10px;
+  padding: 10px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.screen::after {           /* scanlines */
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom, transparent 0 2px, rgba(0, 0, 0, 0.14) 2px 3px);
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+/* ---- palco do pokémon ---- */
+
+.stage {
+  height: 118px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.grass {
+  position: absolute;
+  left: 6px; right: 6px; bottom: 0;
+  height: 12px;
+  background:
+    linear-gradient(var(--grass-hi) 0 4px, var(--grass-lo) 4px 100%);
+  border-radius: 3px;
+  image-rendering: pixelated;
+}
+
+#poke-img {
+  image-rendering: pixelated;
+  height: 96px;
+  width: auto;
+  max-width: 180px;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 6px;
+  animation: bob 2.4s ease-in-out infinite;
+  cursor: pointer;
+}
+#poke-img.hop { animation: hop 0.55s ease-out; }
+#poke-img.flip { transform: scaleX(-1); }
+
+@keyframes bob {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -3px; }
+}
+@keyframes hop {
+  0%   { translate: 0 0; }
+  35%  { translate: 0 -22px; }
+  70%  { translate: 0 0; }
+  85%  { translate: 0 -6px; }
+  100% { translate: 0 0; }
+}
+
+.poke-name {
+  text-align: center;
+  font-size: 8px;
+  color: var(--ink-dim);
+  letter-spacing: 1px;
+  padding: 6px 0 10px;
+  text-transform: uppercase;
+}
+
+/* ---- views ---- */
+
+.view { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.hidden { display: none !important; }
+
+.hint { font-size: 7px; line-height: 1.8; color: var(--ink-dim); }
+.hint b { color: var(--ink); }
+
+.btn {
+  font-family: inherit;
+  font-size: 8px;
+  padding: 10px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--screen-edge);
+  background: #1a2030;
+  color: var(--ink);
+  cursor: pointer;
+}
+.btn:hover { filter: brightness(1.2); }
+.btn-primary { background: var(--accent); color: #1c120c; border-color: #a35138; }
+.btn-ghost { background: transparent; color: var(--ink-dim); }
+
+input {
+  font-family: inherit;
+  font-size: 8px;
+  padding: 9px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--screen-edge);
+  background: #0b0f18;
+  color: var(--ink);
+  outline: none;
+  user-select: text;
+}
+input:focus { border-color: var(--accent); }
+
+.error { font-size: 7px; line-height: 1.7; color: var(--bad); }
+
+/* ---- métricas ---- */
+
+.metric { margin-bottom: 10px; }
+
+.metric-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+}
+
+.label { font-size: 7px; color: var(--ink-dim); letter-spacing: 1px; }
+.value { font-size: 9px; }
+.value.ok   { color: var(--ok); }
+.value.warn { color: var(--warn); }
+.value.bad  { color: var(--bad); }
+
+.bar { display: flex; gap: 2px; height: 9px; }
+.bar span {
+  flex: 1;
+  background: var(--cell-empty);
+  border-radius: 2px;
+}
+.bar.ok   span.fill { background: var(--ok); }
+.bar.warn span.fill { background: var(--warn); }
+.bar.bad  span.fill { background: var(--bad); }
+
+.reset { font-size: 6px; color: var(--ink-dim); margin-top: 4px; letter-spacing: 0.5px; }
+
+/* linhas compactas por modelo (sonnet/opus) */
+.model-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 6px;
+  color: var(--ink-dim);
+  padding: 2px 0 8px;
+}
+.model-row .value { font-size: 7px; }
+
+/* ---- rodapé ---- */
+
+.statusline {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 6px;
+  color: var(--ink-dim);
+}
+.link {
+  font-family: inherit;
+  font-size: 6px;
+  background: none;
+  border: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.link:hover { color: var(--bad); }
+
+@media (prefers-reduced-motion: reduce) {
+  #poke-img, #poke-img.hop { animation: none; }
+}

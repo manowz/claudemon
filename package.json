@@ -1,0 +1,14 @@
+{
+  "name": "claudemon",
+  "version": "1.0.0",
+  "description": "Widget de desktop: consumo do Claude + Pokémon 8-bit dançando",
+  "main": "main.js",
+  "author": "Manowz",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^37.2.0"
+  }
+}

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://pokeapi.co; script-src 'self'" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Claudémon</title>
+</head>
+<body>
+  <div class="shell">
+    <div class="titlebar">
+      <span class="brand">CLAUDÉMON</span>
+      <span class="tb-buttons">
+        <button id="btn-dice"    class="tb-btn" title="Trocar Pokémon">⚄</button>
+        <button id="btn-refresh" class="tb-btn" title="Atualizar">↻</button>
+        <button id="btn-quit"    class="tb-btn tb-quit" title="Fechar">✕</button>
+      </span>
+    </div>
+
+    <div class="screen">
+      <!-- palco do pokémon -->
+      <div class="stage">
+        <img id="poke-img" alt="" draggable="false" />
+        <div class="grass"></div>
+      </div>
+      <div id="poke-name" class="poke-name">…</div>
+
+      <!-- LOGIN -->
+      <section id="view-login" class="view">
+        <p class="hint">Conecte sua conta para ver o consumo.</p>
+        <button id="btn-claude-code" class="btn hidden">Usar login do Claude Code</button>
+        <button id="btn-oauth" class="btn btn-primary">Conectar com Claude</button>
+        <p id="login-error" class="error hidden"></p>
+      </section>
+
+      <!-- COLAR CÓDIGO -->
+      <section id="view-code" class="view hidden">
+        <p class="hint">Autorize no navegador e cole aqui o código exibido (formato <b>codigo#state</b>):</p>
+        <input id="code-input" type="text" spellcheck="false" placeholder="cole o código…" />
+        <button id="btn-code-ok" class="btn btn-primary">Confirmar</button>
+        <button id="btn-code-cancel" class="btn btn-ghost">Cancelar</button>
+        <p id="code-error" class="error hidden"></p>
+      </section>
+
+      <!-- DASHBOARD -->
+      <section id="view-dash" class="view hidden">
+        <div class="metric">
+          <div class="metric-head">
+            <span class="label">SESSÃO 5H</span>
+            <span id="fh-pct" class="value">—</span>
+          </div>
+          <div id="fh-bar" class="bar"></div>
+          <div id="fh-reset" class="reset">—</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-head">
+            <span class="label">SEMANA</span>
+            <span id="sd-pct" class="value">—</span>
+          </div>
+          <div id="sd-bar" class="bar"></div>
+          <div id="sd-reset" class="reset">—</div>
+        </div>
+
+        <div id="model-rows"></div>
+
+        <div class="metric" id="extra-block">
+          <div class="metric-head">
+            <span class="label">EXTRA · MÊS</span>
+            <span id="ex-pct" class="value">—</span>
+          </div>
+          <div id="ex-bar" class="bar"></div>
+          <div id="ex-detail" class="reset">—</div>
+        </div>
+
+        <div class="statusline">
+          <span id="status">carregando…</span>
+          <button id="btn-logout" class="link">sair</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
