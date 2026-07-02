@@ -2,6 +2,13 @@
 
 Widget de desktop (Electron) que mostra o consumo da sua assinatura do Claude com um Pokémon 8-bit aleatório dançando na tela. Sempre visível, arrastável, com ícone na bandeja.
 
+## Como é
+
+| Login | Consumo | Configurações |
+|---|---|---|
+| ![Tela de login do Claudemon](screen1.png) | ![Dashboard de consumo do Claudemon](screen3.png) | ![Tela de configurações do Claudemon](screen2.png) |
+| Conecte sua conta em 1 clique | Sessão 5h, semana e extra do mês | Lembretes, som e Pokémon fixo |
+
 ## ⬇️ Download
 
 Baixe a versão mais recente, dê dois cliques e pronto:
