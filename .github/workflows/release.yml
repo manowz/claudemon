@@ -10,7 +10,17 @@ permissions:
   contents: write
 
 jobs:
+  # Cria o release antes dos builds — sem isso os dois jobs criam
+  # releases duplicados na mesma tag ao publicarem em paralelo.
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "${GITHUB_REF_NAME#v}" --notes "" || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build:
+    needs: create-release
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
