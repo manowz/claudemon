@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('claudemon', {
   getUsage: () => ipcRenderer.invoke('usage:get'),
   logout: () => ipcRenderer.invoke('auth:logout'),
   savePokemon: (id) => ipcRenderer.invoke('pokemon:save', id),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  saveSettings: (s) => ipcRenderer.invoke('settings:set', s),
   quit: () => ipcRenderer.invoke('app:quit'),
   onUsage: (cb) => ipcRenderer.on('usage:update', (_e, p) => cb(p)),
   onAuthRequired: (cb) => ipcRenderer.on('auth:required', (_e, p) => cb(p)),

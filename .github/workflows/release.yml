@@ -1,0 +1,32 @@
+# Compila os instaladores (Windows + macOS) e publica no GitHub Release.
+# Dispara ao enviar uma tag de versão: git tag v1.2.3 && git push origin v1.2.3
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Sem flag de plataforma: cada runner compila os alvos do seu SO
+      # (win → nsis + portable, mac → dmg universal) e anexa ao Release da tag.
+      - run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

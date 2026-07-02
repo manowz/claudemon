@@ -7,26 +7,52 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
-  <title>Claudémon</title>
+  <title>Claudemon</title>
 </head>
 <body>
   <div class="shell">
     <div class="titlebar">
-      <span class="brand">CLAUDÉMON</span>
+      <span class="brand">CLAUDEMON</span>
       <span class="tb-buttons">
-        <button id="btn-dice"    class="tb-btn" title="Trocar Pokémon">⚄</button>
-        <button id="btn-refresh" class="tb-btn" title="Atualizar">↻</button>
-        <button id="btn-quit"    class="tb-btn tb-quit" title="Fechar">✕</button>
+        <button id="btn-dice"     class="tb-btn" title="Trocar Pokémon">⚄</button>
+        <button id="btn-refresh"  class="tb-btn" title="Atualizar">↻</button>
+        <button id="btn-settings" class="tb-btn" title="Configurações">⚙</button>
+        <button id="btn-quit"     class="tb-btn tb-quit" title="Fechar">✕</button>
       </span>
     </div>
 
     <div class="screen">
       <!-- palco do pokémon -->
       <div class="stage">
+        <div id="bubble" class="bubble hidden"></div>
         <img id="poke-img" alt="" draggable="false" />
         <div class="grass"></div>
       </div>
       <div id="poke-name" class="poke-name">…</div>
+
+      <!-- necessidades (tamagotchi) -->
+      <div class="needs">
+        <button class="need" id="need-food" title="Alimentar">
+          <span class="need-icon">🍖</span><span class="need-bar"><b id="bar-food"></b></span>
+        </button>
+        <button class="need" id="need-water" title="Dar água">
+          <span class="need-icon">💧</span><span class="need-bar"><b id="bar-water"></b></span>
+        </button>
+        <button class="need" id="need-love" title="Fazer carinho">
+          <span class="need-icon">❤️</span><span class="need-bar"><b id="bar-love"></b></span>
+        </button>
+      </div>
+
+      <!-- timer / pomodoro -->
+      <div class="timer-row">
+        <span class="t-label">⏱ TIMER</span>
+        <span class="t-fields">
+          <input id="timer-min" type="number" min="1" max="180" value="25" />
+          <span id="timer-unit" class="t-unit">min</span>
+          <span id="timer-display" class="t-display hidden">25:00</span>
+          <button id="btn-timer" class="tb-btn t-btn" title="Iniciar timer">▶</button>
+        </span>
+      </div>
 
       <!-- LOGIN -->
       <section id="view-login" class="view">
@@ -79,6 +105,24 @@
         <div class="statusline">
           <span id="status">carregando…</span>
           <button id="btn-logout" class="link">sair</button>
+        </div>
+      </section>
+
+      <!-- CONFIGURAÇÕES -->
+      <section id="view-settings" class="view hidden">
+        <p class="hint set-title">LEMBRETES · minutos (0 desliga)</p>
+        <div class="set-scroll">
+          <div class="set-row"><label for="set-water">💧 Beber água</label><input id="set-water" type="number" min="0" max="480" /></div>
+          <div class="set-row"><label for="set-stand">🧍 Levantar</label><input id="set-stand" type="number" min="0" max="480" /></div>
+          <div class="set-row"><label for="set-break">☕ Pausa</label><input id="set-break" type="number" min="0" max="480" /></div>
+          <div class="set-row"><label for="set-sound">🔊 Som de alerta</label><input id="set-sound" type="checkbox" /></div>
+          <div class="set-row"><label for="set-top">📌 Sempre visível</label><input id="set-top" type="checkbox" /></div>
+          <div class="set-row"><label for="set-poke">⭐ Pokémon</label><input id="set-poke" type="text" spellcheck="false" placeholder="aleatório" /></div>
+          <p id="set-error" class="error hidden"></p>
+        </div>
+        <div class="set-actions">
+          <button id="btn-set-save" class="btn btn-primary">Salvar</button>
+          <button id="btn-set-back" class="btn btn-ghost">Voltar</button>
         </div>
       </section>
     </div>

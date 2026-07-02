@@ -101,8 +101,8 @@ function send(channel, payload) {
 function createWindow() {
   const bounds = config.get('bounds');
   win = new BrowserWindow({
-    width: 300,
-    height: 480,
+    width: 340,
+    height: 404,
     x: bounds?.x,
     y: bounds?.y,
     frame: false,
@@ -117,6 +117,8 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
+  // nível 'screen-saver' mantém o widget acima até de janelas fullscreen
+  if (config.get('alwaysOnTop', true)) win.setAlwaysOnTop(true, 'screen-saver');
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.on('moved', () => config.set('bounds', win.getBounds()));
   win.on('closed', () => { win = null; });
@@ -125,7 +127,7 @@ function createWindow() {
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png'));
   tray = new Tray(icon);
-  tray.setToolTip('Claudémon — consumo do Claude');
+  tray.setToolTip('Claudemon — consumo do Claude');
   const rebuild = () => {
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: 'Atualizar agora', click: () => pollOnce() },
@@ -137,7 +139,7 @@ function createTray() {
         checked: config.get('alwaysOnTop', true),
         click: (item) => {
           config.set('alwaysOnTop', item.checked);
-          if (win) win.setAlwaysOnTop(item.checked);
+          if (win) win.setAlwaysOnTop(item.checked, 'screen-saver');
         },
       },
       {
@@ -212,6 +214,25 @@ ipcMain.handle('auth:logout', () => {
 
 ipcMain.handle('pokemon:save', (_e, id) => config.set('lastPokemonId', id));
 ipcMain.handle('app:quit', () => app.quit());
+
+// ---- configurações (lembretes, som, sempre visível) ---------------------------
+
+const DEFAULT_SETTINGS = { waterMin: 45, standMin: 60, breakMin: 90, sound: true, pokemon: '', pokemonId: null };
+
+ipcMain.handle('settings:get', () => ({
+  ...DEFAULT_SETTINGS,
+  ...(config.get('settings', {}) || {}),
+  alwaysOnTop: config.get('alwaysOnTop', true),
+}));
+
+ipcMain.handle('settings:set', (_e, s) => {
+  const { alwaysOnTop, ...rest } = s || {};
+  config.set('settings', { ...DEFAULT_SETTINGS, ...(config.get('settings', {}) || {}), ...rest });
+  if (typeof alwaysOnTop === 'boolean') {
+    config.set('alwaysOnTop', alwaysOnTop);
+    if (win) win.setAlwaysOnTop(alwaysOnTop, 'screen-saver');
+  }
+});
 
 // ---- ciclo de vida ------------------------------------------------------------
 
