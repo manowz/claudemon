@@ -353,6 +353,7 @@ async function openSettings() {
   $('set-alert').value = s.usageAlertPct;
   $('set-sound').checked = !!s.sound;
   $('set-top').checked = !!s.alwaysOnTop;
+  $('set-startup').checked = !!s.launchAtStartup;
   $('set-poke').value = s.pokemon || '';
   $('set-error').classList.add('hidden');
   show('settings');
@@ -385,6 +386,7 @@ async function saveSettings() {
     usageAlertPct: Math.max(0, Math.min(100, Math.round(Number($('set-alert').value) || 0))),
     sound: $('set-sound').checked,
     alwaysOnTop: $('set-top').checked,
+    launchAtStartup: $('set-startup').checked,
     pokemon,
     pokemonId,
   };

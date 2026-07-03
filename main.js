@@ -186,6 +186,24 @@ function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
+// ---- iniciar com o sistema ----------------------------------------------------
+
+// O build portátil roda extraído numa pasta temporária: o registro de startup
+// precisa apontar pro exe original (PORTABLE_EXECUTABLE_FILE), não pro extraído.
+const LOGIN_PATH = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+
+function getLaunchAtStartup() {
+  return app.getLoginItemSettings({ path: LOGIN_PATH }).openAtLogin;
+}
+
+// O SO (registro/Login Items) é a fonte da verdade; config.launchAtStartup só
+// registra a escolha pra sabermos que o padrão da primeira execução já foi aplicado.
+function setLaunchAtStartup(enabled) {
+  app.setLoginItemSettings({ openAtLogin: enabled, path: LOGIN_PATH });
+  config.set('launchAtStartup', enabled);
+  if (rebuildTray) rebuildTray();
+}
+
 // ---- janela / tray ----------------------------------------------------------
 
 function createWindow() {
@@ -214,11 +232,13 @@ function createWindow() {
   win.on('closed', () => { win = null; });
 }
 
+let rebuildTray = null;
+
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(__dirname, 'assets', 'tray.png'));
   tray = new Tray(icon);
   tray.setToolTip('Claudemon — consumo do Claude/Codex');
-  const rebuild = () => {
+  rebuildTray = () => {
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: 'Atualizar agora', click: () => pollOnce() },
       { label: 'Trocar Pokémon', click: () => send('pokemon:reroll') },
@@ -235,17 +255,14 @@ function createTray() {
       {
         label: 'Iniciar com o sistema',
         type: 'checkbox',
-        checked: app.getLoginItemSettings().openAtLogin,
-        click: (item) => {
-          app.setLoginItemSettings({ openAtLogin: item.checked });
-          rebuild();
-        },
+        checked: getLaunchAtStartup(),
+        click: (item) => setLaunchAtStartup(item.checked),
       },
       { type: 'separator' },
       { label: 'Sair', click: () => app.quit() },
     ]));
   };
-  rebuild();
+  rebuildTray();
   tray.on('click', () => { if (win) { win.show(); win.focus(); } });
 }
 
@@ -335,20 +352,31 @@ ipcMain.handle('settings:get', () => ({
   ...DEFAULT_SETTINGS,
   ...(config.get('settings', {}) || {}),
   alwaysOnTop: config.get('alwaysOnTop', true),
+  launchAtStartup: getLaunchAtStartup(),
 }));
 
 ipcMain.handle('settings:set', (_e, s) => {
-  const { alwaysOnTop, ...rest } = s || {};
+  const { alwaysOnTop, launchAtStartup, ...rest } = s || {};
   config.set('settings', { ...DEFAULT_SETTINGS, ...(config.get('settings', {}) || {}), ...rest });
   if (typeof alwaysOnTop === 'boolean') {
     config.set('alwaysOnTop', alwaysOnTop);
     if (win) win.setAlwaysOnTop(alwaysOnTop, 'screen-saver');
+  }
+  if (typeof launchAtStartup === 'boolean' && launchAtStartup !== getLaunchAtStartup()) {
+    setLaunchAtStartup(launchAtStartup);
   }
 });
 
 // ---- ciclo de vida ------------------------------------------------------------
 
 app.whenReady().then(() => {
+  // primeira execução do app instalado: liga "iniciar com o sistema" por padrão
+  // (só empacotado e não-portátil — em dev registraria o electron.exe, e no
+  // portátil quem decide é o usuário, já que o exe pode viver num pendrive)
+  if (app.isPackaged && !process.env.PORTABLE_EXECUTABLE_FILE
+      && config.get('launchAtStartup') === null) {
+    setLaunchAtStartup(true);
+  }
   createWindow();
   createTray();
   if (Object.keys(config.getAccounts()).length) schedulePoll(3000); // primeira leitura logo após abrir

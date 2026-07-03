@@ -1,6 +1,6 @@
 # Claudemon 🔴
 
-Widget de desktop (Electron) que mostra o consumo da sua assinatura do **Claude** e/ou do **OpenAI Codex** com um Pokémon 8-bit aleatório dançando na tela. Dá pra conectar as duas IAs ao mesmo tempo e alternar entre elas com uma setinha. Sempre visível, arrastável, com ícone na bandeja.
+Widget de desktop (Electron) que mostra o consumo da sua assinatura do **Claude** e/ou do **OpenAI Codex** com um Pokémon 8-bit aleatório dançando na tela. Dá pra conectar as duas IAs ao mesmo tempo e alternar entre elas com uma setinha. Sempre visível, arrastável, com ícone na bandeja e iniciando junto com o sistema.
 
 ## Como é
 
@@ -87,9 +87,13 @@ O Pokémon avisa quando a **sessão de 5h** atinge um limiar configurável (padr
 
 Linha do timer abaixo das necessidades: digite os minutos (ex.: 25 para um pomodoro) e aperte ▶. Ao terminar, o Pokémon chacoalha, mostra "⏰ DEU O TEMPO!" e apita até você clicar nele (ou no balão) — auto-desliga em 60s.
 
+## Iniciar com o sistema 🚀
+
+O widget entra sozinho junto com o Windows/macOS. No app **instalado**, isso já vem **ligado por padrão** (na primeira execução); dá pra desligar nas configurações (⚙) ou no menu da bandeja — os dois ficam sincronizados. Na versão **portátil** vem desligado (o exe pode morar num pendrive) — marque a opção se quiser, que o registro aponta pro caminho do próprio exe portátil.
+
 ## Configurações ⚙
 
-Botão de engrenagem ao lado do de atualizar: intervalos de cada lembrete (água, levantar, pausa), limiar do alerta de uso da sessão (%), som de alerta on/off, "sempre visível" (janela acima de todas as outras, nível `screen-saver`) e o Pokémon fixo. Persistem em `%APPDATA%/claudemon/config.json`.
+Botão de engrenagem ao lado do de atualizar: intervalos de cada lembrete (água, levantar, pausa), limiar do alerta de uso da sessão (%), som de alerta on/off, "sempre visível" (janela acima de todas as outras, nível `screen-saver`), "iniciar com o sistema" e o Pokémon fixo. Persistem em `%APPDATA%/claudemon/config.json`.
 
 ## Bandeja (tray)
 

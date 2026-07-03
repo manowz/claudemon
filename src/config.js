@@ -11,7 +11,10 @@ let cache = null;
 function load() {
   if (cache) return cache;
   try {
-    cache = JSON.parse(fs.readFileSync(FILE(), 'utf-8'));
+    // tolera BOM (editores/scripts externos salvam UTF-8 com BOM e o JSON.parse
+    // rejeita) — sem isso, um set() qualquer regravaria o arquivo vazio,
+    // destruindo o blob de contas
+    cache = JSON.parse(fs.readFileSync(FILE(), 'utf-8').replace(/^\uFEFF/, ''));
   } catch {
     cache = {};
   }
