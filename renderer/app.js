@@ -246,7 +246,7 @@ function careAction(k) {
 
 // ============================== LEMBRETES ====================================
 
-let settings = { waterMin: 45, standMin: 60, breakMin: 90, sound: true };
+let settings = { waterMin: 45, standMin: 60, breakMin: 90, usageAlertPct: 50, sound: true };
 let reminderTimers = [];
 
 const REMINDERS = [
@@ -271,6 +271,35 @@ function remind(msg) {
   showBubble(msg, 30000);
   hopBurst();
   beep([0, 0.3]);
+}
+
+// ============================== ALERTA DE USO ================================
+// Avisa quando a sessão de 5h atinge o limiar configurado (0 = desligado).
+
+const USAGE_ALERT_KEY = 'usageAlerted';
+
+function usageAlertSeen() {
+  try { return JSON.parse(localStorage.getItem(USAGE_ALERT_KEY)) || {}; }
+  catch { return {}; }
+}
+
+function checkUsageAlert(provider, usage) {
+  const threshold = Math.max(0, Math.min(100, Number(settings.usageAlertPct) || 0));
+  if (threshold <= 0) return;
+  const fh = usage?.five_hour;
+  const util = Number(fh?.utilization);
+  if (!Number.isFinite(util) || util < threshold) return;
+  // chave por janela + limiar: não repete a cada poll, mas re-alerta quando a
+  // sessão reseta ou quando o usuário muda o limiar
+  const key = `${fh.resets_at || 'sem-janela'}:${threshold}`;
+  const seen = usageAlertSeen();
+  if (seen[provider] === key) return;
+  if (alarmOn) return; // alarme do timer tem prioridade — o próximo poll re-tenta
+  seen[provider] = key;
+  localStorage.setItem(USAGE_ALERT_KEY, JSON.stringify(seen));
+  showBubble(`⚠️ SEUS TOKENS ESTÃO ACABANDO! ${PROV_LABEL[provider] || provider} ${Math.round(util)}%`, 30000);
+  hopBurst();
+  beep([0, 0.3, 0.6]);
 }
 
 // ============================== TIMER / POMODORO =============================
@@ -321,6 +350,7 @@ async function openSettings() {
   $('set-water').value = s.waterMin;
   $('set-stand').value = s.standMin;
   $('set-break').value = s.breakMin;
+  $('set-alert').value = s.usageAlertPct;
   $('set-sound').checked = !!s.sound;
   $('set-top').checked = !!s.alwaysOnTop;
   $('set-poke').value = s.pokemon || '';
@@ -352,6 +382,7 @@ async function saveSettings() {
     waterMin: clampMin('set-water'),
     standMin: clampMin('set-stand'),
     breakMin: clampMin('set-break'),
+    usageAlertPct: Math.max(0, Math.min(100, Math.round(Number($('set-alert').value) || 0))),
     sound: $('set-sound').checked,
     alwaysOnTop: $('set-top').checked,
     pokemon,
@@ -547,7 +578,10 @@ function applyResults(results) {
   for (const [p, r] of Object.entries(results)) {
     connected[p] = true; // o main só sonda contas conectadas
     lastResult[p] = r;
-    if (r.ok) usageBy[p] = r.data;
+    if (r.ok) {
+      usageBy[p] = r.data;
+      checkUsageAlert(p, r.data); // avalia até o provedor fora da tela
+    }
   }
   if (!current || !results[current]) {
     const first = Object.keys(results)[0];

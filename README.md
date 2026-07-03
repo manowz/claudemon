@@ -79,13 +79,17 @@ O Pokémon tem três necessidades que caem com o tempo (inclusive com o widget f
 
 O Pokémon te lembra de **beber água**, **levantar/alongar** e **fazer pausas** em intervalos configuráveis (engrenagem ⚙ na barra de título; 0 desliga). O lembrete aparece como balão de fala + pulinhos + bip 8-bit opcional.
 
+## Alerta de consumo ⚠️
+
+O Pokémon avisa quando a **sessão de 5h** atinge um limiar configurável (padrão **50%**; 0 desliga): balão "⚠️ SEUS TOKENS ESTÃO ACABANDO!" com a IA e o percentual, pulinhos e bip 8-bit (respeita o "som de alerta" das configurações — sem som, o balão continua aparecendo). Dispara **uma vez por janela de 5h** e volta a avisar quando a sessão reseta ou quando você muda o limiar. Com Claude e Codex conectados, cada IA alerta por conta própria, mesmo a que não está na tela.
+
 ## Timer / Pomodoro ⏱
 
 Linha do timer abaixo das necessidades: digite os minutos (ex.: 25 para um pomodoro) e aperte ▶. Ao terminar, o Pokémon chacoalha, mostra "⏰ DEU O TEMPO!" e apita até você clicar nele (ou no balão) — auto-desliga em 60s.
 
 ## Configurações ⚙
 
-Botão de engrenagem ao lado do de atualizar: intervalos de cada lembrete (água, levantar, pausa), som de alerta on/off, "sempre visível" (janela acima de todas as outras, nível `screen-saver`) e o Pokémon fixo. Persistem em `%APPDATA%/claudemon/config.json`.
+Botão de engrenagem ao lado do de atualizar: intervalos de cada lembrete (água, levantar, pausa), limiar do alerta de uso da sessão (%), som de alerta on/off, "sempre visível" (janela acima de todas as outras, nível `screen-saver`) e o Pokémon fixo. Persistem em `%APPDATA%/claudemon/config.json`.
 
 ## Bandeja (tray)
 
@@ -107,8 +111,8 @@ A publicação é **automática**: ao enviar uma tag de versão, o GitHub Action
 ```bash
 # fluxo de release (detalhes no CLAUDE.md):
 # 1. suba a "version" no package.json   2. commit + push   3. tag:
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 Para gerar localmente (teste antes de publicar): `npm run dist` (Windows) ou `npm run dist:mac` (rodando num Mac). Saída em `dist/`:

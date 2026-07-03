@@ -329,7 +329,7 @@ ipcMain.handle('app:quit', () => app.quit());
 
 // ---- configurações (lembretes, som, sempre visível) ---------------------------
 
-const DEFAULT_SETTINGS = { waterMin: 45, standMin: 60, breakMin: 90, sound: true, pokemon: '', pokemonId: null };
+const DEFAULT_SETTINGS = { waterMin: 45, standMin: 60, breakMin: 90, usageAlertPct: 50, sound: true, pokemon: '', pokemonId: null };
 
 ipcMain.handle('settings:get', () => ({
   ...DEFAULT_SETTINGS,
