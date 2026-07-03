@@ -1,7 +1,6 @@
 // Consulta o mesmo endpoint que alimenta o /usage do Claude Code.
 // Não documentado oficialmente — pode mudar sem aviso.
 const USAGE_URL = 'https://api.anthropic.com/api/oauth/usage';
-const PROFILE_URL = 'https://api.anthropic.com/api/oauth/profile';
 const BETA = 'oauth-2025-04-20';
 // Sem um User-Agent no formato "claude-code/<versão>" o endpoint cai num
 // bucket de rate limit agressivo e responde 429 (achado da comunidade).
@@ -34,18 +33,4 @@ async function fetchUsage(accessToken) {
   return res.json();
 }
 
-async function fetchProfile(accessToken) {
-  try {
-    const res = await fetch(PROFILE_URL, { headers: headers(accessToken) });
-    if (!res.ok) return null;
-    const j = await res.json();
-    return {
-      email: j?.account?.email_address || j?.account?.email || null,
-      name: j?.account?.full_name || null,
-    };
-  } catch {
-    return null;
-  }
-}
-
-module.exports = { fetchUsage, fetchProfile };
+module.exports = { fetchUsage };

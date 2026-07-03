@@ -57,6 +57,7 @@ async function postToken(body) {
         if (res.ok) return await res.json();
         const text = (await res.text()).slice(0, 200);
         lastErr = new Error(`HTTP ${res.status} em ${new URL(url).host} (${mode}): ${text}`);
+        lastErr.status = res.status; // p/ o main distinguir refresh revogado (400/401)
         // 4xx de validação: tentar próximo formato/endpoint mesmo assim
       } catch (e) {
         lastErr = e;

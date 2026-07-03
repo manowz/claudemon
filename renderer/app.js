@@ -4,6 +4,7 @@ const $ = (id) => document.getElementById(id);
 const views = {
   login: $('view-login'),
   code: $('view-code'),
+  wait: $('view-wait'),
   dash: $('view-dash'),
   settings: $('view-settings'),
 };
@@ -373,14 +374,15 @@ function buildBar(el) {
 function tone(pct) { return pct >= 85 ? 'bad' : pct >= 60 ? 'warn' : 'ok'; }
 
 function setBar(barEl, pctEl, utilization) {
+  const missing = utilization == null; // sem dado ≠ 0% — mostra estado vazio
   const pct = Math.max(0, Math.min(100, Number(utilization) || 0));
-  const t = tone(pct);
-  barEl.className = `bar ${t}`;
+  const t = missing ? '' : tone(pct);
+  barEl.className = `bar ${t}`.trim();
   const cells = barEl.children;
-  const filled = Math.round(pct / 10);
+  const filled = missing ? 0 : Math.round(pct / 10);
   for (let i = 0; i < cells.length; i++) cells[i].className = i < filled ? 'fill' : '';
-  pctEl.className = `value ${t}`;
-  pctEl.textContent = `${Math.round(pct)}%`;
+  pctEl.className = `value ${t}`.trim();
+  pctEl.textContent = missing ? '—' : `${Math.round(pct)}%`;
 }
 
 // ============================== FORMATOS =====================================
@@ -406,6 +408,7 @@ function fmtDay(iso) {
 
 function fmtCredits(n) {
   if (n == null) return '—';
+  if (!Number.isFinite(Number(n))) return String(n);
   return Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 }
 
@@ -436,18 +439,33 @@ function render(usage) {
     rows.appendChild(row);
   });
 
-  // extra usage = o "pote" mensal pago à parte
+  // bloco extra: Claude = "pote" mensal pago à parte; Codex = plano + créditos
+  const setExtraInfo = (label, value, detail) => {
+    $('ex-label').textContent = label;
+    $('ex-pct').className = 'value';
+    $('ex-pct').textContent = value;
+    $('ex-bar').className = 'bar';
+    for (const c of $('ex-bar').children) c.className = '';
+    $('ex-detail').textContent = detail;
+  };
+  if (usage?.provider === 'codex') {
+    const cr = usage.credits;
+    const detail = cr?.unlimited
+      ? 'créditos ilimitados'
+      : cr?.has_credits
+        ? `créditos: ${fmtCredits(cr.balance)}`
+        : 'sem créditos extras';
+    setExtraInfo('PLANO', String(usage.plan || '—').toUpperCase(), detail);
+    return;
+  }
   const ex = usage?.extra_usage;
   if (ex?.is_enabled) {
+    $('ex-label').textContent = 'EXTRA · MÊS';
     setBar($('ex-bar'), $('ex-pct'), ex.utilization);
     $('ex-detail').textContent =
       `${fmtCredits(ex.used_credits)} de ${fmtCredits(ex.monthly_limit)} créditos`;
   } else {
-    $('ex-pct').className = 'value';
-    $('ex-pct').textContent = '—';
-    $('ex-bar').className = 'bar';
-    for (const c of $('ex-bar').children) c.className = '';
-    $('ex-detail').textContent = 'extra usage desativado';
+    setExtraInfo('EXTRA · MÊS', '—', 'extra usage desativado');
   }
 }
 
@@ -461,6 +479,113 @@ function setStatus(text, isError = false) {
   const el = $('status');
   el.textContent = text;
   el.style.color = isError ? 'var(--bad)' : '';
+}
+
+function hhmm(at) {
+  return new Date(at || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ============================== PROVEDORES ===================================
+// O widget pode ter Claude e Codex conectados ao mesmo tempo; o dashboard
+// mostra um por vez e a setinha ▶ alterna entre eles.
+
+const PROV_LABEL = { claude: 'CLAUDE', codex: 'CODEX' };
+const PROV_COLOR = { claude: 'var(--accent)', codex: '#10a37f' };
+
+let connected = { claude: false, codex: false };
+let usageBy = {};    // provider -> último usage renderizável
+let lastResult = {}; // provider -> último {ok, error, authRequired, at}
+let current = localStorage.getItem('provider') || null;
+
+function connectedList() {
+  return Object.keys(connected).filter((k) => connected[k]);
+}
+
+function otherProvider() {
+  return current === 'claude' ? 'codex' : 'claude';
+}
+
+function renderProvRow() {
+  const list = connectedList();
+  $('prov-name').textContent = current ? PROV_LABEL[current] : '—';
+  $('prov-name').style.color = (current && PROV_COLOR[current]) || '';
+  $('btn-prov-next').classList.toggle('hidden', list.length < 2);
+  $('btn-prov-add').classList.toggle('hidden', list.length !== 1);
+}
+
+function setCurrent(p) {
+  current = p;
+  if (p) localStorage.setItem('provider', p);
+  renderProvRow();
+}
+
+// usage "vazio" na forma certa pro render de cada provedor
+function emptyUsage(p) {
+  return p === 'codex' ? { provider: 'codex' } : {};
+}
+
+// troca o painel para o provedor p usando o que já temos em cache
+function showProvider(p) {
+  setCurrent(p);
+  const r = lastResult[p];
+  // sempre re-renderiza: sem cache, limpa as barras (senão os números do
+  // provedor anterior ficariam na tela sob o nome do novo)
+  render(usageBy[p] || emptyUsage(p));
+  if (usageBy[p]) {
+    setStatus(r?.ok ? `atualizado ${hhmm(r.at)}` : r?.error || '…', r ? !r.ok : false);
+  } else if (r && !r.ok) {
+    setStatus(r.error, true);
+  } else {
+    setStatus('carregando…');
+    refresh(); // sem cache ainda — busca agora
+  }
+}
+
+// aplica o retrato completo de usage:get / usage:update (todos os provedores)
+function applyResults(results) {
+  const wasEmpty = connectedList().length === 0;
+  for (const [p, r] of Object.entries(results)) {
+    connected[p] = true; // o main só sonda contas conectadas
+    lastResult[p] = r;
+    if (r.ok) usageBy[p] = r.data;
+  }
+  if (!current || !results[current]) {
+    const first = Object.keys(results)[0];
+    if (first && !connected[current]) setCurrent(first);
+  }
+  const r = results[current];
+  if (r?.ok) {
+    render(r.data);
+    setStatus(`atualizado ${hhmm(r.at)}`);
+  } else if (r) {
+    setStatus(r.error, true);
+  }
+  renderProvRow();
+  // renderer recarregado no meio de um login (ex.: Ctrl+R na tela de espera):
+  // quando os dados chegam, entra no dash sozinho
+  if (wasEmpty && (!views.login.classList.contains('hidden') || !views.wait.classList.contains('hidden'))) {
+    const okP = Object.keys(results).find((p) => results[p].ok) || Object.keys(results)[0];
+    if (okP) {
+      setCurrent(okP);
+      show('dash');
+      render(usageBy[okP] || emptyUsage(okP));
+    }
+  }
+  checkAllExpired();
+}
+
+// se TODAS as sessões conectadas expiraram, volta pra tela de login (uma vez)
+let expiredShown = false;
+async function checkAllExpired() {
+  const list = connectedList();
+  const allBad = list.length > 0 &&
+    list.every((p) => lastResult[p] && !lastResult[p].ok && lastResult[p].authRequired);
+  if (!allBad) { expiredShown = false; return; }
+  if (expiredShown || views.dash.classList.contains('hidden')) return;
+  expiredShown = true;
+  const msg = lastResult[current]?.error || 'sessão expirou — conecte de novo';
+  try { await showLogin(); } catch { show('login'); }
+  loginError($('login-error'), new Error(msg));
 }
 
 // contagem regressiva da sessão a cada segundo
@@ -486,21 +611,42 @@ async function boot() {
   if (settings.pokemonId) showPokemon(settings.pokemonId, settings.pokemon);
   else loadPokemon();
 
-  if (state.authenticated) {
+  connected = { ...connected, ...state.connected };
+  const list = connectedList();
+  if (list.length) {
+    if (!current || !connected[current]) current = list[0];
+    setCurrent(current);
     show('dash');
     setStatus('carregando…');
     refresh();
   } else {
-    show('login');
-    if (state.hasClaudeCodeCreds) $('btn-claude-code').classList.remove('hidden');
+    showLogin(state);
   }
+}
+
+// mostra a tela de login só com as opções que fazem sentido: provedores já
+// conectados E com sessão válida somem (expirados continuam oferecidos, senão
+// a tela mandaria reconectar sem dar botão); "Voltar" aparece se há conectado
+async function showLogin(state = null) {
+  const s = state || (await claudemon.getState());
+  connected = { ...connected, ...s.connected };
+  const expired = (p) => !!(lastResult[p] && !lastResult[p].ok && lastResult[p].authRequired);
+  const offerClaude = !connected.claude || expired('claude');
+  const offerCodex = !connected.codex || expired('codex');
+  $('btn-claude-code').classList.toggle('hidden', !(offerClaude && s.hasClaudeCodeCreds));
+  $('btn-oauth').classList.toggle('hidden', !offerClaude);
+  $('btn-codex-cli').classList.toggle('hidden', !(offerCodex && s.hasCodexCliCreds));
+  $('btn-codex').classList.toggle('hidden', !offerCodex);
+  $('login-or').classList.toggle('hidden', !(offerClaude && offerCodex));
+  $('btn-login-back').classList.toggle('hidden', connectedList().length === 0);
+  $('login-error').classList.add('hidden');
+  show('login');
 }
 
 async function refresh() {
   try {
     setStatus('atualizando…');
-    render(await claudemon.getUsage());
-    setStatus(`atualizado ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
+    applyResults(await claudemon.getUsage());
   } catch (e) {
     setStatus(cleanErr(e), true);
   }
@@ -511,17 +657,36 @@ function loginError(el, e) {
   el.classList.remove('hidden');
 }
 
+// troca de view que respeita a tela de configurações aberta: em vez de fechar
+// uma edição no meio, só ajusta pra onde o "Voltar" das configurações leva
+function showUnlessSettings(name) {
+  if (views.settings.classList.contains('hidden')) show(name);
+  else lastMainView = name;
+}
+
+// entrada no dashboard após qualquer login bem-sucedido
+// (data pode vir null se a 1ª leitura falhou por rede/429 — o polling recupera)
+function loginDone({ provider, data, error }, statusMsg) {
+  connected[provider] = true;
+  if (data) {
+    usageBy[provider] = data;
+    lastResult[provider] = { ok: true, at: Date.now() };
+  }
+  expiredShown = false;
+  setCurrent(provider);
+  showUnlessSettings('dash');
+  render(usageBy[provider] || emptyUsage(provider));
+  setStatus(data ? statusMsg : error || 'carregando…', !data && !!error);
+}
+
 // login via credenciais locais do Claude Code
 $('btn-claude-code').addEventListener('click', async () => {
   try {
-    const { data } = await claudemon.useClaudeCode();
-    show('dash');
-    render(data);
-    setStatus('conectado via Claude Code');
+    loginDone(await claudemon.useClaudeCode(), 'conectado via Claude Code');
   } catch (e) { loginError($('login-error'), e); }
 });
 
-// login via OAuth (abre navegador, usuário cola o código)
+// login via OAuth do Claude (abre navegador, usuário cola o código)
 $('btn-oauth').addEventListener('click', async () => {
   $('login-error').classList.add('hidden');
   await claudemon.startOAuth();
@@ -533,10 +698,7 @@ $('btn-oauth').addEventListener('click', async () => {
 
 $('btn-code-ok').addEventListener('click', async () => {
   try {
-    const { data } = await claudemon.finishOAuth($('code-input').value);
-    show('dash');
-    render(data);
-    setStatus('conectado!');
+    loginDone(await claudemon.finishOAuth($('code-input').value), 'conectado!');
   } catch (e) { loginError($('code-error'), e); }
 });
 
@@ -544,14 +706,55 @@ $('code-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') $('btn-code-ok').click();
 });
 
-$('btn-code-cancel').addEventListener('click', () => show('login'));
+$('btn-code-cancel').addEventListener('click', () => showLogin());
 
-$('btn-logout').addEventListener('click', async () => {
-  await claudemon.logout();
-  const state = await claudemon.getState();
-  show('login');
-  $('btn-claude-code').classList.toggle('hidden', !state.hasClaudeCodeCreds);
+// login via credenciais locais do Codex CLI
+$('btn-codex-cli').addEventListener('click', async () => {
+  try {
+    loginDone(await claudemon.useCodexCli(), 'conectado via Codex CLI');
+  } catch (e) { loginError($('login-error'), e); }
 });
+
+// login via OAuth do Codex: tela de espera dedicada enquanto o navegador abre;
+// o callback local resolve sozinho (sem colar código)
+let codexPending = false;
+$('btn-codex').addEventListener('click', async () => {
+  if (codexPending) return;
+  codexPending = true;
+  show('wait');
+  try {
+    loginDone(await claudemon.startCodex(), 'conectado ao Codex!');
+  } catch (e) {
+    if (views.settings.classList.contains('hidden')) {
+      await showLogin();
+      if (!/cancelado/i.test(String(e?.message || e))) loginError($('login-error'), e);
+    } else {
+      lastMainView = 'login'; // não fecha as configurações no meio da edição
+    }
+  } finally {
+    codexPending = false;
+  }
+});
+
+$('btn-wait-cancel').addEventListener('click', () => claudemon.cancelCodex());
+
+$('btn-login-back').addEventListener('click', () => show('dash'));
+
+// sair desconecta só o provedor exibido; se sobrar outro, alterna pra ele
+$('btn-logout').addEventListener('click', async () => {
+  const p = current;
+  await claudemon.logout(p);
+  connected[p] = false;
+  delete usageBy[p];
+  delete lastResult[p];
+  const rest = connectedList();
+  if (rest.length) showProvider(rest[0]);
+  else { setCurrent(null); showLogin(); }
+});
+
+// setinha ▶ alterna a IA exibida; + conecta a outra
+$('btn-prov-next').addEventListener('click', () => showProvider(otherProvider()));
+$('btn-prov-add').addEventListener('click', () => showLogin());
 
 // barra de título
 $('btn-refresh').addEventListener('click', refresh);
@@ -586,21 +789,8 @@ $('timer-min').addEventListener('keydown', (e) => {
 $('btn-set-save').addEventListener('click', saveSettings);
 $('btn-set-back').addEventListener('click', () => show(lastMainView));
 
-// push do processo principal
-claudemon.onUsage((p) => {
-  if (views.dash.classList.contains('hidden')) return;
-  if (p.ok) {
-    render(p.data);
-    setStatus(`atualizado ${new Date(p.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
-  } else {
-    setStatus(p.error, true);
-  }
-});
-
-claudemon.onAuthRequired((p) => {
-  show('login');
-  loginError($('login-error'), new Error(p.message));
-});
+// push do processo principal: um evento por poll com o mapa completo
+claudemon.onUsage((results) => applyResults(results));
 
 claudemon.onReroll(() => loadPokemon());
 

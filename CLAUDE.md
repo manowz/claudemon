@@ -1,6 +1,6 @@
 # Claudemon — instruções do projeto
 
-Widget de desktop em Electron (JS puro, sem framework) que mostra o consumo da assinatura do Claude com um Pokémon 8-bit. UI em `renderer/` (HTML/CSS/JS), processo principal em `main.js`, persistência/OAuth/usage em `src/`. Idioma do projeto e da comunicação: **português (pt-BR)**.
+Widget de desktop em Electron (JS puro, sem framework) que mostra o consumo da assinatura do Claude **e/ou** do OpenAI Codex (os dois podem ficar conectados ao mesmo tempo; uma setinha no dashboard alterna a IA exibida) com um Pokémon 8-bit. UI em `renderer/` (HTML/CSS/JS), processo principal em `main.js`, persistência/OAuth/usage em `src/` (Claude em `oauth.js`+`usage.js`, Codex em `codex.js`, contas por provedor em `config.js`). Idioma do projeto e da comunicação: **português (pt-BR)**.
 
 ## Comandos
 

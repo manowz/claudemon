@@ -59,7 +59,18 @@
         <p class="hint">Conecte sua conta para ver o consumo.</p>
         <button id="btn-claude-code" class="btn hidden">Usar login do Claude Code</button>
         <button id="btn-oauth" class="btn btn-primary">Conectar com Claude</button>
+        <div id="login-or" class="or"><span>ou</span></div>
+        <button id="btn-codex-cli" class="btn hidden">Usar login do Codex CLI</button>
+        <button id="btn-codex" class="btn btn-codex">Conectar com Codex</button>
+        <button id="btn-login-back" class="btn btn-ghost hidden">Voltar</button>
         <p id="login-error" class="error hidden"></p>
+      </section>
+
+      <!-- AGUARDANDO O NAVEGADOR (Codex) -->
+      <section id="view-wait" class="view hidden">
+        <p class="hint">Conclua o login do <b>Codex</b> na janela do navegador que abrimos.</p>
+        <p class="hint">Assim que você autorizar, esta tela atualiza sozinha.</p>
+        <button id="btn-wait-cancel" class="btn btn-ghost">Cancelar</button>
       </section>
 
       <!-- COLAR CÓDIGO -->
@@ -73,6 +84,15 @@
 
       <!-- DASHBOARD -->
       <section id="view-dash" class="view hidden">
+        <!-- seletor de IA: nome à esquerda, +/▶ à direita -->
+        <div class="prov-row">
+          <span id="prov-name" class="prov-name">—</span>
+          <span class="prov-side">
+            <button id="btn-prov-add"  class="prov-arrow hidden" title="Conectar a outra IA">+</button>
+            <button id="btn-prov-next" class="prov-arrow hidden" title="Ver a outra IA">▶</button>
+          </span>
+        </div>
+
         <div class="metric">
           <div class="metric-head">
             <span class="label">SESSÃO 5H</span>
@@ -95,7 +115,7 @@
 
         <div class="metric" id="extra-block">
           <div class="metric-head">
-            <span class="label">EXTRA · MÊS</span>
+            <span id="ex-label" class="label">EXTRA · MÊS</span>
             <span id="ex-pct" class="value">—</span>
           </div>
           <div id="ex-bar" class="bar"></div>
