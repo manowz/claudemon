@@ -17,12 +17,13 @@ function show(name) {
 // ============================== POKÉMON ======================================
 // Sprites animados da Gen V (pixel art que já "dança" sozinha), via PokeAPI.
 const POKE_MAX = 649;
-const gifUrl = (id) =>
-  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${id}.gif`;
-const pngUrl = (id) =>
-  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+const gifUrl = (id, shiny) =>
+  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${shiny ? 'shiny/' : ''}${id}.gif`;
+const pngUrl = (id, shiny) =>
+  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${shiny ? 'shiny/' : ''}${id}.png`;
 
 let currentPoke = null;
+let currentName = null;
 let lastPokeId = null;
 
 function randomPokeId() {
@@ -31,18 +32,20 @@ function randomPokeId() {
   return id;
 }
 
-function displayName(name, id) {
-  return name ? `${name} · #${String(id).padStart(3, '0')}` : `#${String(id).padStart(3, '0')}`;
+function displayName(name, id, shiny) {
+  const base = name ? `${name} · #${String(id).padStart(3, '0')}` : `#${String(id).padStart(3, '0')}`;
+  return shiny ? `✨ ${base}` : base;
 }
 
 async function showPokemon(id, name = null, tries = 0) {
   const img = $('poke-img');
   const nameEl = $('poke-name');
+  const shiny = isShiny(id);
   nameEl.textContent = '…';
 
   img.onerror = () => {
     if (tries > 1) loadPokemon(tries - 1); // só re-sorteia se veio de sorteio
-    else { img.onerror = null; img.src = pngUrl(id); } // fallback estático
+    else { img.onerror = null; img.src = pngUrl(id, shiny); } // fallback estático
   };
   img.onload = () => {
     currentPoke = id;
@@ -50,15 +53,17 @@ async function showPokemon(id, name = null, tries = 0) {
     claudemon.savePokemon(id);
     img.classList.toggle('flip', Math.random() < 0.5);
   };
-  img.src = gifUrl(id);
+  img.src = gifUrl(id, shiny);
 
-  if (name) { nameEl.textContent = displayName(name, id); return; }
+  if (name) { currentName = name; nameEl.textContent = displayName(name, id, shiny); return; }
   try {
     const r = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
     const j = await r.json();
-    nameEl.textContent = displayName(j.name, id);
+    currentName = j.name;
+    nameEl.textContent = displayName(j.name, id, shiny);
   } catch {
-    nameEl.textContent = displayName(null, id);
+    currentName = null;
+    nameEl.textContent = displayName(null, id, shiny);
   }
 }
 
@@ -103,8 +108,10 @@ function hopBurst() {
 // ============================== BALÃO DE FALA ================================
 
 let bubbleTimer = null;
+let reminderXpArmed = false; // balão de lembrete ativo dá XP ao ser clicado
 
 function showBubble(text, ms = 2500) {
+  reminderXpArmed = false; // qualquer balão novo invalida o lembrete anterior
   const b = $('bubble');
   clearTimeout(bubbleTimer);
   b.textContent = text;
@@ -138,6 +145,155 @@ function beep(offsets = [0]) {
       osc.stop(t + 0.16);
     }
   } catch { /* sem áudio disponível */ }
+}
+
+// arpejo ascendente de level up (estilo fanfarra de Game Boy)
+function jingle() {
+  if (!settings.sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784, 1047].forEach((freq, i) => {
+      const t = audioCtx.currentTime + i * 0.13;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.05, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.21);
+    });
+  } catch { /* sem áudio disponível */ }
+}
+
+// ============================== LEVEL / XP ===================================
+// Level único, compartilhado por todos os pokémon. XP vem de cuidar do bicho
+// (com cooldown anti-spam), cumprir lembretes clicando no balão e — por que
+// não — torrar 100% da sessão de 5h. A cada level (sem evolução) há chance de
+// virar shiny; a cada EVOLVE_EVERY levels o pokémon evolui de verdade.
+
+const XP_KEY = 'xp';
+const SHINY_CHANCE = 0.3;
+const EVOLVE_EVERY = 5;
+const XP_CARE_COOLDOWN_MS = 5 * 60000;
+const XP_CARE = 5;
+const XP_REMINDER = 10;
+const XP_SESSION = 30;
+
+let xpState = loadXp();
+
+function loadXp() {
+  try {
+    const s = JSON.parse(localStorage.getItem(XP_KEY)) || {};
+    return {
+      level: Math.max(1, Math.round(Number(s.level) || 1)),
+      xp: Math.max(0, Number(s.xp) || 0),
+      shinyId: Number.isInteger(s.shinyId) ? s.shinyId : null,
+    };
+  } catch {
+    return { level: 1, xp: 0, shinyId: null };
+  }
+}
+
+function saveXp() {
+  localStorage.setItem(XP_KEY, JSON.stringify(xpState));
+}
+
+function isShiny(id) {
+  return xpState.shinyId != null && xpState.shinyId === id;
+}
+
+function xpNeeded(level) {
+  return 30 + (level - 1) * 10;
+}
+
+function renderLevel() {
+  $('level-num').textContent = `LV ${xpState.level}`;
+  const pct = Math.max(0, Math.min(100, (xpState.xp / xpNeeded(xpState.level)) * 100));
+  $('xp-fill').style.width = `${Math.round(pct)}%`;
+}
+
+// "+N XP" flutuando sobre o palco
+function floatXp(text) {
+  const el = document.createElement('span');
+  el.className = 'xp-float';
+  el.textContent = text;
+  document.querySelector('.stage').appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+
+function gainXp(amount) {
+  xpState.xp += amount;
+  floatXp(`+${amount} XP`);
+  let leveled = false;
+  while (xpState.xp >= xpNeeded(xpState.level)) {
+    xpState.xp -= xpNeeded(xpState.level);
+    xpState.level += 1;
+    leveled = true;
+  }
+  saveXp();
+  renderLevel();
+  if (leveled) onLevelUp();
+}
+
+function onLevelUp() {
+  jingle();
+  hopBurst();
+  const img = $('poke-img');
+  img.classList.add('levelup');
+  setTimeout(() => img.classList.remove('levelup'), 2400);
+  if (!alarmOn) showBubble(`🎉 LEVEL ${xpState.level}!`, 4000);
+  if (xpState.level % EVOLVE_EVERY === 0) tryEvolve();
+  else maybeShiny();
+}
+
+function maybeShiny() {
+  if (!currentPoke || isShiny(currentPoke)) return;
+  if (Math.random() >= SHINY_CHANCE) return;
+  const id = currentPoke;
+  xpState.shinyId = id;
+  saveXp();
+  // deixa o balão de level respirar antes da surpresa
+  setTimeout(() => {
+    if (currentPoke !== id) return;
+    showPokemon(id, currentName);
+    jingle();
+    if (!alarmOn) showBubble('✨ UAU… EU VIREI SHINY! ✨', 6000);
+  }, 1500);
+}
+
+// A cada EVOLVE_EVERY levels, evolui via cadeia de evolução da PokeAPI (se a
+// espécie tiver próxima etapa com sprite animado). Sem evolução → roleta shiny.
+async function tryEvolve() {
+  const id = currentPoke;
+  if (!id) return;
+  try {
+    const sp = await (await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`)).json();
+    const chain = (await (await fetch(sp.evolution_chain.url)).json()).chain;
+    const next = findEvoNode(chain, sp.name)?.evolves_to?.[0];
+    const nextId = next ? Number((next.species.url.match(/\/(\d+)\/?$/) || [])[1]) : NaN;
+    if (!nextId || nextId > POKE_MAX) { maybeShiny(); return; }
+    setTimeout(() => {
+      if (currentPoke !== id) return; // usuário trocou de pokémon no meio
+      if (xpState.shinyId === id) { xpState.shinyId = nextId; saveXp(); } // o brilho acompanha
+      showPokemon(nextId, next.species.name);
+      jingle();
+      hopBurst();
+      if (!alarmOn) showBubble('🎉 OLHA SÓ… EU EVOLUÍ!', 6000);
+    }, 1500);
+  } catch {
+    maybeShiny();
+  }
+}
+
+function findEvoNode(node, name) {
+  if (node.species.name === name) return node;
+  for (const n of node.evolves_to || []) {
+    const found = findEvoNode(n, name);
+    if (found) return found;
+  }
+  return null;
 }
 
 // ============================== ALARME =======================================
@@ -235,13 +391,21 @@ function tickCare() {
 }
 setInterval(tickCare, 30000);
 
+const lastCareXp = {}; // anti-spam: XP por necessidade no máximo a cada 5 min
+
 function careAction(k) {
+  const before = care[k];
   care[k] = Math.min(100, care[k] + NEEDS[k].gain);
   care.ts = Date.now();
   saveCare();
   renderNeeds();
   if (!alarmOn) showBubble(NEEDS[k].thanks, 1800);
   hop();
+  // XP só quando o cuidado "valeu" (barra não estava cheia) e fora do cooldown
+  if (before < 95 && Date.now() - (lastCareXp[k] || 0) >= XP_CARE_COOLDOWN_MS) {
+    lastCareXp[k] = Date.now();
+    gainXp(XP_CARE);
+  }
 }
 
 // ============================== LEMBRETES ====================================
@@ -269,6 +433,7 @@ function scheduleReminders() {
 function remind(msg) {
   if (alarmOn) return; // alarme do timer tem prioridade
   showBubble(msg, 30000);
+  reminderXpArmed = true; // clicar no balão = "feito!" → XP
   hopBurst();
   beep([0, 0.3]);
 }
@@ -300,6 +465,25 @@ function checkUsageAlert(provider, usage) {
   showBubble(`⚠️ SEUS TOKENS ESTÃO ACABANDO! ${PROV_LABEL[provider] || provider} ${Math.round(util)}%`, 30000);
   hopBurst();
   beep([0, 0.3, 0.6]);
+}
+
+// ============================== XP POR SESSÃO TORRADA ========================
+// Gastar 100% da sessão de 5h dá XP — uma vez por janela, por provedor.
+
+const SESSION_XP_KEY = 'sessionXp';
+
+function checkSessionXp(provider, usage) {
+  const fh = usage?.five_hour;
+  const util = Number(fh?.utilization);
+  if (!Number.isFinite(util) || util < 100) return;
+  const key = fh.resets_at || 'sem-janela';
+  let seen = {};
+  try { seen = JSON.parse(localStorage.getItem(SESSION_XP_KEY)) || {}; } catch { /* recomeça */ }
+  if (seen[provider] === key) return;
+  seen[provider] = key;
+  localStorage.setItem(SESSION_XP_KEY, JSON.stringify(seen));
+  if (!alarmOn) showBubble('💥 VOCÊ TORROU A SESSÃO INTEIRA! RESPEITO.', 8000);
+  gainXp(XP_SESSION); // depois do balão: level up, se rolar, fala mais alto
 }
 
 // ============================== TIMER / POMODORO =============================
@@ -393,7 +577,10 @@ async function saveSettings() {
   await claudemon.saveSettings(payload);
   settings = { ...settings, ...payload };
   scheduleReminders();
-  if (pokemonId && pokemonId !== currentPoke) showPokemon(pokemonId, pokemon);
+  // procurar de novo um pokémon que virou shiny devolve a versão normal dele
+  const unshined = pokemonId && isShiny(pokemonId);
+  if (unshined) { xpState.shinyId = null; saveXp(); }
+  if (pokemonId && (pokemonId !== currentPoke || unshined)) showPokemon(pokemonId, pokemon);
   show(lastMainView);
 }
 
@@ -583,6 +770,7 @@ function applyResults(results) {
     if (r.ok) {
       usageBy[p] = r.data;
       checkUsageAlert(p, r.data); // avalia até o provedor fora da tela
+      checkSessionXp(p, r.data);
     }
   }
   if (!current || !results[current]) {
@@ -645,6 +833,7 @@ setInterval(() => {
 async function boot() {
   ['fh-bar', 'sd-bar', 'ex-bar'].forEach((id) => buildBar($(id)));
   renderNeeds();
+  renderLevel();
 
   settings = { ...settings, ...(await claudemon.getSettings()) };
   scheduleReminders();
@@ -819,7 +1008,16 @@ $('poke-img').addEventListener('click', () => {
 $('need-food').addEventListener('click', () => careAction('food'));
 $('need-water').addEventListener('click', () => careAction('water'));
 $('need-love').addEventListener('click', () => careAction('love'));
-$('bubble').addEventListener('click', () => (alarmOn ? stopAlarm() : hideBubble()));
+$('bubble').addEventListener('click', () => {
+  if (alarmOn) { stopAlarm(); return; }
+  const armed = reminderXpArmed;
+  hideBubble();
+  if (armed) { // cumprir o lembrete (água, levantar, pausa) dá XP
+    showBubble('👍 BOA!', 2000); // antes do XP: balão de level up tem prioridade
+    hop();
+    gainXp(XP_REMINDER);
+  }
+});
 
 $('btn-timer').addEventListener('click', () => {
   if (timerEnd) { stopTimer(); return; }

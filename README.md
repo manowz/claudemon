@@ -75,9 +75,26 @@ Sprites animados da **Geração V (Black/White)** via PokeAPI — pixel art com 
 
 O Pokémon tem três necessidades que caem com o tempo (inclusive com o widget fechado, com piso de 10%): **fome**, **sede** e **carinho**. Os botões abaixo do nome alimentam, dão água e fazem carinho; clicar no próprio Pokémon também conta como carinho. Quando alguma necessidade fica baixa, ele reclama num balão de fala e fica "tristinho" (dessaturado). Estado salvo localmente (localStorage).
 
+## Level up 🎮✨
+
+O Pokémon tem um **level**, exibido no canto superior direito do palco com uma barrinha de XP — e ele é **compartilhado por todos os Pokémon** (trocar de bicho não zera nada). Ganha XP quem cuida:
+
+| Ação | XP |
+|---|---|
+| Alimentar / dar água / fazer carinho | +5 (por necessidade, no máx. a cada 5 min — spam de clique não vale, nem alimentar de barriga cheia) |
+| Cumprir um lembrete (clicar no balão de "beber água", "levantar", "pausa" = *feito!*) | +10 |
+| **Torrar 100% da sessão de 5h** 💥 | +30 (uma vez por janela, por IA — respeito.) |
+
+A cada level up: fanfarra 8-bit, flash no sprite e:
+
+- **Shiny** ✨ — chance alta (30%) de o Pokémon atual virar shiny (sprite shiny animado oficial). Não gostou? É só **procurar o mesmo Pokémon de novo nas configurações** (⚙) que ele volta ao normal.
+- **Evolução** 🎉 — a cada **5 levels**, se a espécie tiver próxima etapa, o Pokémon **evolui de verdade** (cadeia de evolução da PokeAPI). Se for shiny, o brilho acompanha a evolução. Para voltar, escolha o Pokémon antigo nas configurações ou sorteie outro no ⚄.
+
+Tudo salvo localmente (localStorage), como o resto do tamagotchi.
+
 ## Lembretes 💧🧍☕
 
-O Pokémon te lembra de **beber água**, **levantar/alongar** e **fazer pausas** em intervalos configuráveis (engrenagem ⚙ na barra de título; 0 desliga). O lembrete aparece como balão de fala + pulinhos + bip 8-bit opcional.
+O Pokémon te lembra de **beber água**, **levantar/alongar** e **fazer pausas** em intervalos configuráveis (engrenagem ⚙ na barra de título; 0 desliga). O lembrete aparece como balão de fala + pulinhos + bip 8-bit opcional. Clicar no balão marca o lembrete como cumprido e dá **+10 XP** pro Pokémon.
 
 ## Alerta de consumo ⚠️
 
