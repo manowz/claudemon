@@ -98,7 +98,7 @@ O Pokémon te lembra de **beber água**, **levantar/alongar** e **fazer pausas**
 
 ## Alerta de consumo ⚠️
 
-O Pokémon avisa quando a **sessão de 5h** atinge um limiar configurável (padrão **50%**; 0 desliga): balão "⚠️ SEUS TOKENS ESTÃO ACABANDO!" com a IA e o percentual, pulinhos e bip 8-bit (respeita o "som de alerta" das configurações — sem som, o balão continua aparecendo). Dispara **uma vez por janela de 5h** e volta a avisar quando a sessão reseta ou quando você muda o limiar. Com Claude e Codex conectados, cada IA alerta por conta própria, mesmo a que não está na tela.
+O Pokémon avisa quando a **sessão de 5h** atinge um limiar configurável (padrão **50%**; 0 desliga): balão "⚠️ SEUS TOKENS ESTÃO ACABANDO!" com a IA e o percentual, pulinhos e bip 8-bit (respeita o "som de alerta" das configurações — sem som, o balão continua aparecendo). Dispara **uma única vez** ao cruzar o limiar e só volta a avisar depois que o consumo cair abaixo dele (sessão nova). Com Claude e Codex conectados, cada IA alerta por conta própria, mesmo a que não está na tela.
 
 ## Timer / Pomodoro ⏱
 

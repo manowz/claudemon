@@ -439,7 +439,10 @@ function remind(msg) {
 }
 
 // ============================== ALERTA DE USO ================================
-// Avisa quando a sessão de 5h atinge o limiar configurado (0 = desligado).
+// Avisa UMA vez quando a sessão de 5h cruza o limiar configurado (0 = desligado)
+// e só rearma quando o consumo cai abaixo dele (sessão nova). Dedupe por
+// cruzamento, não por janela: o resets_at reportado pela API pode variar entre
+// polls, e usá-lo na chave fazia o alerta repetir toda hora.
 
 const USAGE_ALERT_KEY = 'usageAlerted';
 
@@ -451,16 +454,20 @@ function usageAlertSeen() {
 function checkUsageAlert(provider, usage) {
   const threshold = Math.max(0, Math.min(100, Number(settings.usageAlertPct) || 0));
   if (threshold <= 0) return;
-  const fh = usage?.five_hour;
-  const util = Number(fh?.utilization);
-  if (!Number.isFinite(util) || util < threshold) return;
-  // chave por janela + limiar: não repete a cada poll, mas re-alerta quando a
-  // sessão reseta ou quando o usuário muda o limiar
-  const key = `${fh.resets_at || 'sem-janela'}:${threshold}`;
+  const util = Number(usage?.five_hour?.utilization);
+  if (!Number.isFinite(util)) return;
   const seen = usageAlertSeen();
-  if (seen[provider] === key) return;
+  if (util < threshold) {
+    // caiu abaixo do limiar (sessão resetou ou limiar subiu) — rearma o alerta
+    if (seen[provider]) {
+      delete seen[provider];
+      localStorage.setItem(USAGE_ALERT_KEY, JSON.stringify(seen));
+    }
+    return;
+  }
+  if (seen[provider]) return; // já avisou nesta subida — só volta a avisar após rearmar
   if (alarmOn) return; // alarme do timer tem prioridade — o próximo poll re-tenta
-  seen[provider] = key;
+  seen[provider] = new Date().toISOString();
   localStorage.setItem(USAGE_ALERT_KEY, JSON.stringify(seen));
   showBubble(`⚠️ SEUS TOKENS ESTÃO ACABANDO! ${PROV_LABEL[provider] || provider} ${Math.round(util)}%`, 30000);
   hopBurst();
