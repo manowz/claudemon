@@ -143,6 +143,7 @@ module.exports = {
   buildAuthorizeUrl,
   exchangeCode,
   refreshTokens,
+  claudeCodeCredsPath,
   readClaudeCodeCreds,
   hasClaudeCodeCreds,
 };

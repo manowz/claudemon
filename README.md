@@ -51,12 +51,12 @@ npm start
 
 ### Claude
 
-1. **Usar login do Claude Code** — se o Claude Code já está logado na máquina (`~/.claude/.credentials.json`), o botão aparece e conecta em 1 clique. Quando esse token expira, o widget apenas **relê o arquivo** (nunca usa o refresh token do Claude Code, para não derrubar a sessão dele). Se ficar expirado, abra o Claude Code uma vez.
+1. **Usar login do Claude Code** — se o Claude Code já está logado na máquina (`~/.claude/.credentials.json`), o botão aparece e conecta em 1 clique. Quando esse token expira, o widget apenas **relê o arquivo** (nunca usa o refresh token do Claude Code, para não derrubar a sessão dele). Se ficar expirado (ex.: ao ligar o PC — esse token dura ~8 h), basta abrir o Claude Code uma vez: o widget percebe a renovação do arquivo e volta ao normal sozinho, em segundos. Se quiser que o widget nunca dependa do Claude Code aberto, use o **Conectar com Claude** (opção 2), que renova sozinho.
 2. **Conectar com Claude** — fluxo OAuth+PKCE: abre o navegador em `claude.ai/oauth/authorize`, você autoriza, a página de callback mostra um código no formato `codigo#state` — cole no widget. O refresh é automático depois disso.
 
 ### Codex (plano ChatGPT)
 
-1. **Usar login do Codex CLI** — se o Codex CLI já está logado na máquina (`~/.codex/auth.json`), o botão aparece e conecta em 1 clique. Vale a mesma regra do Claude Code: o widget só **lê o access token** e relê o arquivo quando expira — **nunca** usa o refresh token do CLI (ele rotaciona com detecção de reuso; um refresh externo derrubaria a sessão do Codex). Se ficar expirado, use o Codex CLI uma vez.
+1. **Usar login do Codex CLI** — se o Codex CLI já está logado na máquina (`~/.codex/auth.json`), o botão aparece e conecta em 1 clique. Vale a mesma regra do Claude Code: o widget só **lê o access token** e relê o arquivo quando expira — **nunca** usa o refresh token do CLI (ele rotaciona com detecção de reuso; um refresh externo derrubaria a sessão do Codex). Se ficar expirado, basta usar o Codex CLI uma vez: o widget percebe a renovação do arquivo e volta ao normal sozinho.
 2. **Conectar com Codex** — fluxo OAuth+PKCE igual ao do próprio Codex CLI: abre o navegador em `auth.openai.com`, você entra com a conta ChatGPT e o widget recebe o retorno sozinho por um servidor local em `http://localhost:1455/auth/callback` (nada de colar código). Depois disso o refresh é automático. Se o Codex CLI estiver no meio de um login, a porta 1455 pode estar ocupada — conclua ou cancele lá e tente de novo.
 
 ### As duas ao mesmo tempo

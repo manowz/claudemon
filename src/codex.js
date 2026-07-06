@@ -300,6 +300,7 @@ async function fetchUsage(accessToken, accountId) {
 module.exports = {
   startLogin,
   refreshTokens,
+  codexAuthPath,
   readCodexCliCreds,
   hasCodexCliCreds,
   fetchUsage,

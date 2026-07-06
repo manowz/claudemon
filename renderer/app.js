@@ -616,7 +616,16 @@ async function checkAllExpired() {
   const list = connectedList();
   const allBad = list.length > 0 &&
     list.every((p) => lastResult[p] && !lastResult[p].ok && lastResult[p].authRequired);
-  if (!allBad) { expiredShown = false; return; }
+  if (!allBad) {
+    // a sessão voltou (ex.: usuário abriu o Claude Code e o token foi renovado):
+    // se fomos nós que empurramos pra tela de login, voltamos ao dash sozinhos
+    if (expiredShown && !views.login.classList.contains('hidden')) {
+      const okP = list.find((p) => lastResult[p]?.ok);
+      if (okP) { show('dash'); showProvider(okP); }
+    }
+    expiredShown = false;
+    return;
+  }
   if (expiredShown || views.dash.classList.contains('hidden')) return;
   expiredShown = true;
   const msg = lastResult[current]?.error || 'sessão expirou — conecte de novo';

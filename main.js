@@ -1,4 +1,5 @@
 const { app, BrowserWindow, Tray, Menu, ipcMain, shell, nativeImage } = require('electron');
+const fs = require('fs');
 const path = require('path');
 const config = require('./src/config');
 const oauth = require('./src/oauth');
@@ -33,6 +34,12 @@ const CLI_SOURCES = {
     expired: 'token do Codex expirou — use o Codex CLI uma vez ou "Conectar com Codex"',
   },
 };
+
+// Conta conectada pelo atalho de um CLI (relemos o arquivo dele, sem refresh próprio)?
+function isCliAccount(provider) {
+  const a = config.getAccount(provider);
+  return !!(a && CLI_SOURCES[a.source]);
+}
 
 const refreshing = {}; // provider -> Promise do refresh em voo
 
@@ -108,6 +115,8 @@ async function getUsageAuthed(provider) {
 // Sessões que falharam com authRequired entram em quarentena por 10 min:
 // sem isso, um refresh token revogado geraria POSTs no endpoint de token a
 // cada poll de 2 min, para sempre. Refresh manual (força) ignora a quarentena.
+// Contas via atalho de CLI ficam de fora: renovar é só reler um arquivo local
+// (custo zero), e a quarentena atrasaria a recuperação depois que o CLI roda.
 const AUTH_FAIL_COOLDOWN_MS = 10 * 60 * 1000;
 const authFail = {}; // provider -> { until, result }
 
@@ -130,7 +139,9 @@ async function fetchAllUsage(force = false) {
         status: e.status,
         at: Date.now(),
       };
-      if (e.authRequired) authFail[p] = { until: Date.now() + AUTH_FAIL_COOLDOWN_MS, result: out[p] };
+      if (e.authRequired && !isCliAccount(p)) {
+        authFail[p] = { until: Date.now() + AUTH_FAIL_COOLDOWN_MS, result: out[p] };
+      }
     }
   }));
   return out;
@@ -184,6 +195,31 @@ async function pollOnce() {
 
 function send(channel, payload) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+}
+
+// ---- vigia das credenciais de CLI ---------------------------------------------
+
+// Quem renova o token dos atalhos de CLI é o próprio CLI, quando é usado — no
+// boot do Windows o token da véspera já expirou e o widget ficaria "expirado"
+// até o próximo poll DEPOIS de o usuário rodar o CLI. Vigiando o arquivo de
+// credenciais, a recuperação é imediata: o CLI grava tokens novos, sondamos na hora.
+function watchCliCreds(provider, credsFile) {
+  let timer = null;
+  try {
+    // vigia o diretório: CLIs regravam o arquivo por rename e um watch direto
+    // no arquivo morreria na primeira renovação
+    fs.watch(path.dirname(credsFile), (_ev, name) => {
+      if (name && name !== path.basename(credsFile)) return;
+      if (!isCliAccount(provider)) return;
+      clearTimeout(timer); // debounce: uma gravação gera vários eventos
+      timer = setTimeout(() => {
+        delete authFail[provider];
+        pollOnce();
+      }, 1000);
+    });
+  } catch {
+    // pasta não existe (CLI nunca logado nesta máquina) — sem o que vigiar
+  }
 }
 
 // ---- iniciar com o sistema ----------------------------------------------------
@@ -379,6 +415,8 @@ app.whenReady().then(() => {
   }
   createWindow();
   createTray();
+  watchCliCreds('claude', oauth.claudeCodeCredsPath());
+  watchCliCreds('codex', codex.codexAuthPath());
   if (Object.keys(config.getAccounts()).length) schedulePoll(3000); // primeira leitura logo após abrir
 });
 
