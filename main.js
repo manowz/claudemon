@@ -27,11 +27,11 @@ app.on('second-instance', () => {
 const CLI_SOURCES = {
   'claude-code': {
     read: () => oauth.readClaudeCodeCreds(),
-    expired: 'token do Claude Code expirou — abra o Claude Code uma vez ou use "Conectar com Claude"',
+    expired: 'token venceu — renova sozinho no próximo uso do Claude Code (ou use "Conectar com Claude")',
   },
   'codex-cli': {
     read: () => codex.readCodexCliCreds(),
-    expired: 'token do Codex expirou — use o Codex CLI uma vez ou "Conectar com Codex"',
+    expired: 'token venceu — renova sozinho no próximo uso do Codex CLI (ou use "Conectar com Codex")',
   },
 };
 
@@ -58,7 +58,15 @@ async function ensureAccessToken(provider, forceRefresh = false) {
       config.setAccount(provider, fresh);
       return fresh;
     }
-    throw authError(cli.expired);
+    // O CLI só regrava o arquivo quando é USADO — perto do fim da validade o
+    // arquivo ainda tem o token velho. Enquanto ele não venceu DE VERDADE,
+    // usamos assim mesmo: melhor do que declarar "expirou" minutos antes da
+    // hora. Se levar 401 no meio, o retry com forceRefresh cai aqui de novo.
+    const best = fresh && fresh.expiresAt > (t.expiresAt || 0) ? fresh : t;
+    if (!forceRefresh && best.accessToken && Date.now() < (best.expiresAt || 0)) return best;
+    const e = authError(cli.expired);
+    e.waitingCli = true; // não é preciso relogar — o próximo uso do CLI renova o arquivo
+    throw e;
   }
 
   if (!t.refreshToken) throw authError('sessão expirou — conecte de novo');
@@ -136,6 +144,7 @@ async function fetchAllUsage(force = false) {
         ok: false,
         error: e.message,
         authRequired: !!e.authRequired,
+        waitingCli: !!e.waitingCli, // esperando o CLI renovar o arquivo — não é falha de login
         status: e.status,
         at: Date.now(),
       };

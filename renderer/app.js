@@ -752,9 +752,9 @@ function showProvider(p) {
   // provedor anterior ficariam na tela sob o nome do novo)
   render(usageBy[p] || emptyUsage(p));
   if (usageBy[p]) {
-    setStatus(r?.ok ? `atualizado ${hhmm(r.at)}` : r?.error || '…', r ? !r.ok : false);
+    setStatus(r?.ok ? `atualizado ${hhmm(r.at)}` : r?.error || '…', r ? !r.ok && !r.waitingCli : false);
   } else if (r && !r.ok) {
-    setStatus(r.error, true);
+    setStatus(r.error, !r.waitingCli);
   } else {
     setStatus('carregando…');
     refresh(); // sem cache ainda — busca agora
@@ -782,7 +782,7 @@ function applyResults(results) {
     render(r.data);
     setStatus(`atualizado ${hhmm(r.at)}`);
   } else if (r) {
-    setStatus(r.error, true);
+    setStatus(r.error, !r.waitingCli); // esperando o CLI renovar não é erro — sem vermelho
   }
   renderProvRow();
   // renderer recarregado no meio de um login (ex.: Ctrl+R na tela de espera):
@@ -814,6 +814,11 @@ async function checkAllExpired() {
     expiredShown = false;
     return;
   }
+  // "expirado" só porque o CLI ainda não regravou o arquivo de credenciais:
+  // fica no dashboard com o aviso no rodapé — a tela de login não ajudaria
+  // (o atalho de lá leria o mesmo arquivo vencido) e o watcher do main
+  // recupera sozinho assim que o CLI for usado de novo
+  if (list.every((p) => lastResult[p]?.waitingCli)) return;
   if (expiredShown || views.dash.classList.contains('hidden')) return;
   expiredShown = true;
   const msg = lastResult[current]?.error || 'sessão expirou — conecte de novo';
