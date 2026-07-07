@@ -168,12 +168,15 @@ async function finishLogin(provider, tokens) {
     schedulePoll();
     return { provider, data };
   } catch (e) {
-    if (e.authRequired) {
+    if (e.authRequired && !e.waitingCli) {
       config.setAccount(provider, null); // credencial inútil — desfaz o login
       throw e;
     }
-    schedulePoll(); // conta válida, leitura falhou (429/rede) — o polling recupera
-    return { provider, data: null, error: e.message };
+    // waitingCli: a conta FICA — apagá-la desarmaria o watcher (isCliAccount)
+    // e a promessa "renova sozinho no próximo uso do CLI" nunca se cumpriria.
+    // O usuário entra no dashboard em modo "esperando o CLI renovar".
+    schedulePoll(); // leitura falhou (429/rede/CLI vencido) — o polling recupera
+    return { provider, data: null, error: e.message, waitingCli: !!e.waitingCli };
   }
 }
 

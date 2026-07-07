@@ -911,18 +911,24 @@ function showUnlessSettings(name) {
 }
 
 // entrada no dashboard após qualquer login bem-sucedido
-// (data pode vir null se a 1ª leitura falhou por rede/429 — o polling recupera)
-function loginDone({ provider, data, error }, statusMsg) {
+// (data pode vir null se a 1ª leitura falhou por rede/429 — o polling recupera;
+// waitingCli = atalho de CLI com token vencido — aviso neutro, watcher resolve)
+function loginDone({ provider, data, error, waitingCli }, statusMsg) {
   connected[provider] = true;
   if (data) {
     usageBy[provider] = data;
     lastResult[provider] = { ok: true, at: Date.now() };
+  } else if (error) {
+    // espelha o formato dos polls: waitingCli é o único erro "de auth" que chega aqui
+    lastResult[provider] = {
+      ok: false, error, authRequired: !!waitingCli, waitingCli: !!waitingCli, at: Date.now(),
+    };
   }
   expiredShown = false;
   setCurrent(provider);
   showUnlessSettings('dash');
   render(usageBy[provider] || emptyUsage(provider));
-  setStatus(data ? statusMsg : error || 'carregando…', !data && !!error);
+  setStatus(data ? statusMsg : error || 'carregando…', !data && !!error && !waitingCli);
 }
 
 // login via credenciais locais do Claude Code
