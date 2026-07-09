@@ -7,7 +7,7 @@ Widget de desktop (Electron) que mostra o consumo da sua assinatura do **Claude*
 | Login | Consumo | Configurações |
 |---|---|---|
 | ![Tela de login do Claudemon](screen1.png) | ![Dashboard de consumo do Claudemon](screen3.png) | ![Tela de configurações do Claudemon](screen2.png) |
-| Conecte Claude e/ou Codex em 1 clique | Sessão 5h, semana e extra — ▶ alterna a IA | Lembretes, som e Pokémon fixo |
+| Conecte Claude e/ou Codex em 1 clique | Sessão 5h, semana e modelo — ▶ alterna a IA | Lembretes, som e Pokémon fixo |
 
 ## ⬇️ Download
 
@@ -31,8 +31,8 @@ Todas as versões ficam na [página de releases](https://github.com/manowz/claud
 |---|---|---|
 | **Sessão 5h** | janela de uso atual + contagem regressiva do reset | idem (janela primária) |
 | **Semana** | limite semanal (7 dias) + dia/hora do reset | idem (janela secundária) |
-| **Sonnet/Opus 7d** | sub-limites semanais por modelo (conforme o plano) | — |
-| **Extra · Mês / Plano** | créditos de *extra usage* usados no mês vs. limite | plano da conta (Plus/Pro/…) + saldo de créditos |
+| **Sonnet/Opus 7d** | sub-limites semanais por modelo (formato antigo, conforme o plano) | — |
+| **Fable · Semana / Plano** | limite semanal do modelo (Fable etc.), com dia/hora do reset | plano da conta (Plus/Pro/…) + saldo de créditos |
 
 > Nem o Claude nem o Codex têm limite "diário" — os limites reais das assinaturas são a **sessão de 5 horas** e a **janela semanal**. O widget mostra exatamente essas janelas.
 

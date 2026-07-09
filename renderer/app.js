@@ -685,14 +685,19 @@ function render(usage) {
     setExtraInfo('PLANO', String(usage.plan || '—').toUpperCase(), detail);
     return;
   }
-  const ex = usage?.extra_usage;
-  if (ex?.is_enabled) {
-    $('ex-label').textContent = 'EXTRA · MÊS';
-    setBar($('ex-bar'), $('ex-pct'), ex.utilization);
-    $('ex-detail').textContent =
-      `${fmtCredits(ex.used_credits)} de ${fmtCredits(ex.monthly_limit)} créditos`;
+  // Claude: limite semanal por modelo (Fable etc.) vem em limits[] com
+  // kind "weekly_scoped" — os buckets fixos (seven_day_opus/...) viraram null
+  const scoped = (usage?.limits || []).filter(
+    (l) => l?.kind === 'weekly_scoped' && l?.scope?.model
+  );
+  const m = scoped.find((l) => l.is_active) || scoped[0];
+  if (m) {
+    const name = String(m.scope.model.display_name || 'modelo').toUpperCase();
+    $('ex-label').textContent = `${name} · SEMANA`;
+    setBar($('ex-bar'), $('ex-pct'), m.percent);
+    $('ex-detail').textContent = fmtDay(m.resets_at);
   } else {
-    setExtraInfo('EXTRA · MÊS', '—', 'extra usage desativado');
+    setExtraInfo('FABLE · SEMANA', '—', 'sem limite por modelo');
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "claudemon",
-  "version": "1.4.3",
+  "version": "1.5.0",
   "description": "Widget de desktop: consumo do Claude + Pokémon 8-bit dançando",
   "main": "main.js",
   "author": "Manowz",

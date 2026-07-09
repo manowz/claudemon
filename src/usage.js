@@ -26,9 +26,12 @@ async function fetchUsage(accessToken) {
   // {
   //   five_hour:        { utilization: 33.0, resets_at: "..." },
   //   seven_day:        { utilization: 13.0, resets_at: "..." },
-  //   seven_day_sonnet: { ... } | null,
-  //   seven_day_opus:   { ... } | null,
-  //   extra_usage: { is_enabled, monthly_limit, used_credits, utilization }
+  //   seven_day_sonnet: { ... } | null,   // legado — hoje vem null
+  //   seven_day_opus:   { ... } | null,   // legado — hoje vem null
+  //   extra_usage: { is_enabled, monthly_limit, used_credits, utilization },
+  //   limits: [ { kind: "session"|"weekly_all"|"weekly_scoped", percent,
+  //               resets_at, is_active,
+  //               scope: { model: { display_name: "Fable" } } | null } ]
   // }
   return res.json();
 }
